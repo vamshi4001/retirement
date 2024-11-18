@@ -1,11 +1,20 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Info } from "lucide-react";
 import {
   Calculator,
   Wallet,
@@ -17,6 +26,9 @@ import {
   Bitcoin,
   PiggyBank,
   DollarSign,
+  Home,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import {
   LineChart,
@@ -34,7 +46,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Info } from "lucide-react";
 
 const RetirementCalculator = () => {
   interface Investment {
@@ -80,7 +91,7 @@ const RetirementCalculator = () => {
 
   const [currentAge, setCurrentAge] = useState(30);
   const [retirementAge, setRetirementAge] = useState(65);
-  const [monthlyIncome, setMonthlyIncome] = useState(5000);
+  const [monthlyIncome, setMonthlyIncome] = useState(10000);
   const [salary, setSalary] = useState(100000);
   const [currentSavings, setCurrentSavings] = useState(50000);
 
@@ -97,6 +108,27 @@ const RetirementCalculator = () => {
       commodities: false,
       crypto: false,
     });
+
+  const [properties, setProperties] = useState([
+    {
+      id: 1,
+      address: "",
+      currentValue: 0,
+      monthlyRent: 0,
+      mortgage: 0,
+      appreciationRate: 0.03,
+    },
+  ]);
+
+  const [manualSavings, setManualSavings] = useState({
+    taxableAccounts: [
+      { id: 1, name: "Brokerage", balance: 0, expectedReturn: 0.07 },
+    ],
+    taxAdvantaged: [
+      { id: 1, name: "HSA", balance: 0, expectedReturn: 0.07 },
+      { id: 2, name: "529", balance: 0, expectedReturn: 0.07 },
+    ],
+  });
 
   const tooltips = {
     currentAge:
@@ -209,6 +241,16 @@ const RetirementCalculator = () => {
         description: "20% potential return, extreme volatility",
       },
     ],
+  };
+
+  const calculateWithdrawalStrategy = (assets) => {
+    // Implement tax-efficient withdrawal strategy
+    // Consider RMDs, tax brackets, and capital gains
+    return {
+      optimalWithdrawal: {},
+      taxImpact: {},
+      yearlyBreakdown: [],
+    };
   };
 
   const calculateProjections = () => {
@@ -538,6 +580,156 @@ const RetirementCalculator = () => {
             </CardContent>
           </Card>
 
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Home className="w-6 h-6" />
+                Real Estate Portfolio
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {properties.map((property, index) => (
+                <div
+                  key={property.id}
+                  className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4"
+                >
+                  <Input
+                    type="text"
+                    placeholder="Property Address"
+                    className="col-span-2"
+                    value={property.address}
+                    onChange={(e) => {
+                      const newProperties = [...properties];
+                      newProperties[index].address = e.target.value;
+                      setProperties(newProperties);
+                    }}
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Current Value"
+                    value={property.currentValue}
+                    onChange={(e) => {
+                      const newProperties = [...properties];
+                      newProperties[index].currentValue = Number(
+                        e.target.value
+                      );
+                      setProperties(newProperties);
+                    }}
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Monthly Rent"
+                    value={property.monthlyRent}
+                    onChange={(e) => {
+                      const newProperties = [...properties];
+                      newProperties[index].monthlyRent = Number(e.target.value);
+                      setProperties(newProperties);
+                    }}
+                  />
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setProperties([
+                    ...properties,
+                    {
+                      id: properties.length + 1,
+                      address: "",
+                      currentValue: 0,
+                      monthlyRent: 0,
+                      mortgage: 0,
+                      appreciationRate: 0.03,
+                    },
+                  ])
+                }
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Property
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Manual Savings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="font-semibold mb-4">Taxable Accounts</h3>
+                  {manualSavings.taxableAccounts.map((account, index) => (
+                    <div key={account.id} className="flex gap-4 mb-4">
+                      <Input
+                        placeholder="Account Name"
+                        value={account.name}
+                        onChange={(e) => {
+                          const newAccounts = [
+                            ...manualSavings.taxableAccounts,
+                          ];
+                          newAccounts[index].name = e.target.value;
+                          setManualSavings({
+                            ...manualSavings,
+                            taxableAccounts: newAccounts,
+                          });
+                        }}
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Balance"
+                        value={account.balance}
+                        onChange={(e) => {
+                          const newAccounts = [
+                            ...manualSavings.taxableAccounts,
+                          ];
+                          newAccounts[index].balance = Number(e.target.value);
+                          setManualSavings({
+                            ...manualSavings,
+                            taxableAccounts: newAccounts,
+                          });
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-4">
+                    Tax-Advantaged Accounts
+                  </h3>
+                  {manualSavings.taxAdvantaged.map((account, index) => (
+                    <div key={account.id} className="flex gap-4 mb-4">
+                      <Input
+                        placeholder="Account Name"
+                        value={account.name}
+                        onChange={(e) => {
+                          const newAccounts = [...manualSavings.taxAdvantaged];
+                          newAccounts[index].name = e.target.value;
+                          setManualSavings({
+                            ...manualSavings,
+                            taxAdvantaged: newAccounts,
+                          });
+                        }}
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Balance"
+                        value={account.balance}
+                        onChange={(e) => {
+                          const newAccounts = [...manualSavings.taxAdvantaged];
+                          newAccounts[index].balance = Number(e.target.value);
+                          setManualSavings({
+                            ...manualSavings,
+                            taxAdvantaged: newAccounts,
+                          });
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {Object.entries(investments).map(
               ([category, invs]) =>
@@ -611,36 +803,47 @@ const RetirementCalculator = () => {
             )}
           </div>
 
-          <div className="h-64 w-full mb-6">
-            <ResponsiveContainer>
-              <LineChart data={results.projectionData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="age" />
-                <YAxis />
-                <RechartsTooltip
-                  formatter={(value: number) => `$${value.toLocaleString()}`}
-                />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="total401k"
-                  name="401(k)"
-                  stroke="#8884d8"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="rothIRA"
-                  name="Roth IRA"
-                  stroke="#82ca9d"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="taxableInvestments"
-                  name="Taxable Investments"
-                  stroke="#ffc658"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-4">
+              Projected Retirement Assets Growth
+            </h2>
+            <div className="h-64 w-full">
+              <ResponsiveContainer>
+                <LineChart data={results.projectionData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="age" />
+                  <YAxis />
+                  <RechartsTooltip
+                    formatter={(value) => `$${value.toLocaleString()}`}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="total401k"
+                    name="401(k)"
+                    stroke="#8884d8"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="rothIRA"
+                    name="Roth IRA"
+                    stroke="#82ca9d"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="propertyValue"
+                    name="Real Estate"
+                    stroke="#ffa726"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="taxableInvestments"
+                    name="Other Investments"
+                    stroke="#ef5350"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
@@ -699,6 +902,17 @@ const RetirementCalculator = () => {
           </div>
         </CardContent>
       </Card>
+      <Alert className="mb-6 bg-gray-50">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>
+          This calculator is for informational purposes only and should not be
+          considered financial advice. The projections shown are based on
+          historical data and assumptions that may not reflect future
+          performance. Please consult with a qualified financial advisor before
+          making investment decisions. Past performance does not guarantee
+          future results.
+        </AlertDescription>
+      </Alert>
       <div className="h-32 md:h-24" />
     </div>
   );
