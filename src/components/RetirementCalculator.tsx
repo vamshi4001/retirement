@@ -30,6 +30,33 @@ import {
 } from 'recharts';
 
 const RetirementCalculator = () => {
+    interface Investment {
+        id: keyof InvestmentStates;
+        name: string;
+        returnRate: number;
+        icon: React.ElementType;
+        description: string;
+      }
+      
+      interface InvestmentStates {
+        // Retirement accounts
+        traditional401k: boolean;
+        rothIRA: boolean;
+        // Other investments
+        highYieldSavings: boolean;
+        sp500: boolean;
+        realEstate: boolean;
+        bonds: boolean;
+        commodities: boolean;
+        crypto: boolean;
+      }
+      
+      interface InvestmentCategories {
+        retirementAccounts: Investment[];
+        lowRisk: Investment[];
+        mediumRisk: Investment[];
+        highRisk: Investment[];
+      }
   // Initialize state variables at the top
   const [retirementAccounts, setRetirementAccounts] = useState({
     traditional401k: {
@@ -50,7 +77,11 @@ const RetirementCalculator = () => {
   const [salary, setSalary] = useState(100000);
   const [currentSavings, setCurrentSavings] = useState(50000);
 
-  const [enabledInvestments, setEnabledInvestments] = useState({
+  const [enabledInvestments, setEnabledInvestments] = useState<InvestmentStates>({
+    // Retirement accounts
+    traditional401k: true,
+    rothIRA: true,
+    // Other investments
     highYieldSavings: true,
     sp500: true,
     realEstate: true,
@@ -58,6 +89,7 @@ const RetirementCalculator = () => {
     commodities: false,
     crypto: false
   });
+  
 
   // Constants
   const MAX_401K_CONTRIBUTION = 22500;
@@ -66,7 +98,7 @@ const RetirementCalculator = () => {
   const CATCH_UP_401K = 7500;
   const CATCH_UP_ROTH = 1000;
 
-  const investments = {
+  const investments: InvestmentCategories = {
     retirementAccounts: [
       {
         id: 'traditional401k',
@@ -350,7 +382,7 @@ const RetirementCalculator = () => {
                       word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
                     ).join(' ')}
                   </CardTitle>
-                  {invs.map((investment) => (
+                  {invs.map((investment: Investment) => (
                     <div key={investment.id} className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <investment.icon className="w-4 h-4" />
@@ -360,11 +392,14 @@ const RetirementCalculator = () => {
                         </div>
                       </div>
                       <Switch
-                        checked={enabledInvestments[investment.id]}
-                        onCheckedChange={(checked) => 
-                          setEnabledInvestments(prev => ({...prev, [investment.id]: checked}))
+                        checked={enabledInvestments[investment.id as keyof InvestmentStates]}
+                        onCheckedChange={(checked: boolean) => 
+                            setEnabledInvestments(prev => ({
+                            ...prev,
+                            [investment.id]: checked
+                            } as InvestmentStates))
                         }
-                      />
+                        />
                     </div>
                   ))}
                 </Card>
