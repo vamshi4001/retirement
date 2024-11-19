@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/tooltip";
 import PropertyInputs from "./PropertyInputs";
 import SavingsInput from "./SavingsInput";
+import ProjectionSummary from "./ProjectionSummary";
 
 interface Investment {
   id: keyof InvestmentStates;
@@ -866,60 +867,12 @@ const RetirementCalculator = () => {
             </div>
           </div>
 
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
-            <div className="max-w-6xl mx-auto">
-              <Card className="rounded-none border-0 bg-gradient-to-r from-blue-50 to-indigo-50">
-                <CardContent className="p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
-                    <div className="bg-white rounded-lg p-3 shadow-sm">
-                      <div className="text-sm font-medium text-gray-500">
-                        Total Needed
-                      </div>
-                      <div className="text-xl font-bold text-blue-600">
-                        $
-                        {Math.round(
-                          results.totalRetirementNeeds
-                        ).toLocaleString()}
-                      </div>
-                    </div>
-                    <div className="bg-white rounded-lg p-3 shadow-sm">
-                      <div className="text-sm font-medium text-gray-500">
-                        From Retirement Accounts
-                      </div>
-                      <div className="text-xl font-bold text-green-600">
-                        $
-                        {Math.round(
-                          results.projectedRetirementAccounts
-                        ).toLocaleString()}
-                      </div>
-                    </div>
-                    <div className="bg-white rounded-lg p-3 shadow-sm">
-                      <div className="text-sm font-medium text-gray-500">
-                        Additional Savings Needed
-                      </div>
-                      <div className="text-xl font-bold text-purple-600">
-                        $
-                        {Math.round(
-                          results.additionalSavingsNeeded
-                        ).toLocaleString()}
-                      </div>
-                    </div>
-                    <div className="bg-white rounded-lg p-3 shadow-sm">
-                      <div className="text-sm font-medium text-gray-500">
-                        Monthly Investment
-                      </div>
-                      <div className="text-xl font-bold text-orange-600">
-                        $
-                        {Number(
-                          results.monthlyInvestmentNeeded
-                        ).toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+          <ProjectionSummary
+            results={results}
+            monthlyIncome={monthlyIncome}
+            currentAge={currentAge}
+            retirementAge={retirementAge}
+          />
         </CardContent>
       </Card>
       <Alert className="mb-6 bg-gray-50">
