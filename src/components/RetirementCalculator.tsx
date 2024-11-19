@@ -47,34 +47,96 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+interface Investment {
+  id: keyof InvestmentStates;
+  name: string;
+  returnRate: number;
+  icon: React.ElementType;
+  description: string;
+}
+
+interface InvestmentStates {
+  // Retirement accounts
+  traditional401k: boolean;
+  rothIRA: boolean;
+  // Other investments
+  highYieldSavings: boolean;
+  sp500: boolean;
+  realEstate: boolean;
+  bonds: boolean;
+  commodities: boolean;
+  crypto: boolean;
+}
+
+interface InvestmentCategories {
+  retirementAccounts: Investment[];
+  lowRisk: Investment[];
+  mediumRisk: Investment[];
+  highRisk: Investment[];
+}
+
+interface Property {
+  id: number;
+  address: string;
+  currentValue: number;
+  loanAmount: number;
+  monthlyRent: number;
+  monthlyExpenses: number;
+  appreciationRate: number;
+}
+
+interface PropertyInputsProps {
+  property: Property;
+  onChange: (id: number, field: keyof Property, value: string | number) => void;
+  onDelete: (id: number) => void;
+}
+
+// Savings Types
+interface SavingsAccount {
+  id: number;
+  name: string;
+  balance: number;
+  expectedReturn: number;
+}
+
+interface SavingsInputProps {
+  account: SavingsAccount;
+  onChange: (
+    id: number,
+    field: keyof SavingsAccount,
+    value: string | number
+  ) => void;
+  type: "taxable" | "tax-advantaged";
+}
+
+interface ManualSavings {
+  taxableAccounts: SavingsAccount[];
+  taxAdvantaged: SavingsAccount[];
+}
+
 const RetirementCalculator = () => {
-  interface Investment {
-    id: keyof InvestmentStates;
-    name: string;
-    returnRate: number;
-    icon: React.ElementType;
-    description: string;
-  }
+  // Usage in main component
+  const [properties, setProperties] = useState<Property[]>([
+    {
+      id: 1,
+      address: "",
+      currentValue: 0,
+      loanAmount: 0,
+      monthlyRent: 0,
+      monthlyExpenses: 0,
+      appreciationRate: 0.03,
+    },
+  ]);
 
-  interface InvestmentStates {
-    // Retirement accounts
-    traditional401k: boolean;
-    rothIRA: boolean;
-    // Other investments
-    highYieldSavings: boolean;
-    sp500: boolean;
-    realEstate: boolean;
-    bonds: boolean;
-    commodities: boolean;
-    crypto: boolean;
-  }
-
-  interface InvestmentCategories {
-    retirementAccounts: Investment[];
-    lowRisk: Investment[];
-    mediumRisk: Investment[];
-    highRisk: Investment[];
-  }
+  const [manualSavings, setManualSavings] = useState<ManualSavings>({
+    taxableAccounts: [
+      { id: 1, name: "Brokerage", balance: 0, expectedReturn: 0.07 },
+    ],
+    taxAdvantaged: [
+      { id: 1, name: "HSA", balance: 0, expectedReturn: 0.07 },
+      { id: 2, name: "529", balance: 0, expectedReturn: 0.07 },
+    ],
+  });
   // Initialize state variables at the top
   const [retirementAccounts, setRetirementAccounts] = useState({
     traditional401k: {
@@ -108,27 +170,6 @@ const RetirementCalculator = () => {
       commodities: false,
       crypto: false,
     });
-
-  const [properties, setProperties] = useState([
-    {
-      id: 1,
-      address: "",
-      currentValue: 0,
-      monthlyRent: 0,
-      mortgage: 0,
-      appreciationRate: 0.03,
-    },
-  ]);
-
-  const [manualSavings, setManualSavings] = useState({
-    taxableAccounts: [
-      { id: 1, name: "Brokerage", balance: 0, expectedReturn: 0.07 },
-    ],
-    taxAdvantaged: [
-      { id: 1, name: "HSA", balance: 0, expectedReturn: 0.07 },
-      { id: 2, name: "529", balance: 0, expectedReturn: 0.07 },
-    ],
-  });
 
   const tooltips = {
     currentAge:
@@ -588,57 +629,34 @@ const RetirementCalculator = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {properties.map((property, index) => (
-                <div
+              {properties.map((property) => (
+                <PropertyInputs
                   key={property.id}
-                  className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4"
-                >
-                  <Input
-                    type="text"
-                    placeholder="Property Address"
-                    className="col-span-2"
-                    value={property.address}
-                    onChange={(e) => {
-                      const newProperties = [...properties];
-                      newProperties[index].address = e.target.value;
-                      setProperties(newProperties);
-                    }}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Current Value"
-                    value={property.currentValue}
-                    onChange={(e) => {
-                      const newProperties = [...properties];
-                      newProperties[index].currentValue = Number(
-                        e.target.value
-                      );
-                      setProperties(newProperties);
-                    }}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Monthly Rent"
-                    value={property.monthlyRent}
-                    onChange={(e) => {
-                      const newProperties = [...properties];
-                      newProperties[index].monthlyRent = Number(e.target.value);
-                      setProperties(newProperties);
-                    }}
-                  />
-                </div>
+                  property={property}
+                  onChange={(id, field, value) => {
+                    setProperties((prev) =>
+                      prev.map((p) =>
+                        p.id === id ? { ...p, [field]: value } : p
+                      )
+                    );
+                  }}
+                  onDelete={(id) => {
+                    setProperties((prev) => prev.filter((p) => p.id !== id));
+                  }}
+                />
               ))}
               <Button
                 variant="outline"
                 onClick={() =>
-                  setProperties([
-                    ...properties,
+                  setProperties((prev) => [
+                    ...prev,
                     {
-                      id: properties.length + 1,
+                      id: Date.now(),
                       address: "",
                       currentValue: 0,
+                      loanAmount: 0,
                       monthlyRent: 0,
-                      mortgage: 0,
+                      monthlyExpenses: 0,
                       appreciationRate: 0.03,
                     },
                   ])
@@ -658,72 +676,40 @@ const RetirementCalculator = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <h3 className="font-semibold mb-4">Taxable Accounts</h3>
-                  {manualSavings.taxableAccounts.map((account, index) => (
-                    <div key={account.id} className="flex gap-4 mb-4">
-                      <Input
-                        placeholder="Account Name"
-                        value={account.name}
-                        onChange={(e) => {
-                          const newAccounts = [
-                            ...manualSavings.taxableAccounts,
-                          ];
-                          newAccounts[index].name = e.target.value;
-                          setManualSavings({
-                            ...manualSavings,
-                            taxableAccounts: newAccounts,
-                          });
-                        }}
-                      />
-                      <Input
-                        type="number"
-                        placeholder="Balance"
-                        value={account.balance}
-                        onChange={(e) => {
-                          const newAccounts = [
-                            ...manualSavings.taxableAccounts,
-                          ];
-                          newAccounts[index].balance = Number(e.target.value);
-                          setManualSavings({
-                            ...manualSavings,
-                            taxableAccounts: newAccounts,
-                          });
-                        }}
-                      />
-                    </div>
+                  {manualSavings.taxableAccounts.map((account) => (
+                    <SavingsInput
+                      key={account.id}
+                      account={account}
+                      onChange={(id, field, value) => {
+                        setManualSavings((prev) => ({
+                          ...prev,
+                          taxableAccounts: prev.taxableAccounts.map((a) =>
+                            a.id === id ? { ...a, [field]: value } : a
+                          ),
+                        }));
+                      }}
+                      type="taxable"
+                    />
                   ))}
                 </div>
                 <div>
                   <h3 className="font-semibold mb-4">
                     Tax-Advantaged Accounts
                   </h3>
-                  {manualSavings.taxAdvantaged.map((account, index) => (
-                    <div key={account.id} className="flex gap-4 mb-4">
-                      <Input
-                        placeholder="Account Name"
-                        value={account.name}
-                        onChange={(e) => {
-                          const newAccounts = [...manualSavings.taxAdvantaged];
-                          newAccounts[index].name = e.target.value;
-                          setManualSavings({
-                            ...manualSavings,
-                            taxAdvantaged: newAccounts,
-                          });
-                        }}
-                      />
-                      <Input
-                        type="number"
-                        placeholder="Balance"
-                        value={account.balance}
-                        onChange={(e) => {
-                          const newAccounts = [...manualSavings.taxAdvantaged];
-                          newAccounts[index].balance = Number(e.target.value);
-                          setManualSavings({
-                            ...manualSavings,
-                            taxAdvantaged: newAccounts,
-                          });
-                        }}
-                      />
-                    </div>
+                  {manualSavings.taxAdvantaged.map((account) => (
+                    <SavingsInput
+                      key={account.id}
+                      account={account}
+                      onChange={(id, field, value) => {
+                        setManualSavings((prev) => ({
+                          ...prev,
+                          taxAdvantaged: prev.taxAdvantaged.map((a) =>
+                            a.id === id ? { ...a, [field]: value } : a
+                          ),
+                        }));
+                      }}
+                      type="tax-advantaged"
+                    />
                   ))}
                 </div>
               </div>
@@ -917,5 +903,124 @@ const RetirementCalculator = () => {
     </div>
   );
 };
+
+const PropertyInputs = ({
+  property,
+  onChange,
+  onDelete,
+}: PropertyInputsProps) => (
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 border rounded-lg">
+    <div className="col-span-full">
+      <Label htmlFor={`address-${property.id}`}>Property Address</Label>
+      <Input
+        id={`address-${property.id}`}
+        type="text"
+        value={property.address}
+        onChange={(e) => onChange(property.id, "address", e.target.value)}
+        placeholder="Enter property address"
+      />
+    </div>
+
+    <div>
+      <Label htmlFor={`value-${property.id}`}>Total Property Value ($)</Label>
+      <Input
+        id={`value-${property.id}`}
+        type="number"
+        value={property.currentValue}
+        onChange={(e) =>
+          onChange(property.id, "currentValue", Number(e.target.value))
+        }
+        placeholder="Current market value"
+      />
+    </div>
+
+    <div>
+      <Label htmlFor={`loan-${property.id}`}>Remaining Loan Amount ($)</Label>
+      <Input
+        id={`loan-${property.id}`}
+        type="number"
+        value={property.loanAmount}
+        onChange={(e) =>
+          onChange(property.id, "loanAmount", Number(e.target.value))
+        }
+        placeholder="Outstanding mortgage"
+      />
+    </div>
+
+    <div>
+      <Label htmlFor={`equity-${property.id}`}>Current Equity</Label>
+      <Input
+        id={`equity-${property.id}`}
+        type="text"
+        value={`$${(
+          property.currentValue - property.loanAmount
+        ).toLocaleString()}`}
+        disabled
+        className="bg-gray-50"
+      />
+    </div>
+
+    <div>
+      <Label htmlFor={`rent-${property.id}`}>Monthly Rental Income ($)</Label>
+      <Input
+        id={`rent-${property.id}`}
+        type="number"
+        value={property.monthlyRent}
+        onChange={(e) =>
+          onChange(property.id, "monthlyRent", Number(e.target.value))
+        }
+        placeholder="If rental property"
+      />
+    </div>
+
+    <div>
+      <Label htmlFor={`expenses-${property.id}`}>Monthly Expenses ($)</Label>
+      <Input
+        id={`expenses-${property.id}`}
+        type="number"
+        value={property.monthlyExpenses}
+        onChange={(e) =>
+          onChange(property.id, "monthlyExpenses", Number(e.target.value))
+        }
+        placeholder="Maintenance, taxes, etc."
+      />
+    </div>
+
+    <Button
+      variant="destructive"
+      size="icon"
+      className="absolute top-4 right-4"
+      onClick={() => onDelete(property.id)}
+    >
+      <Trash2 className="h-4 w-4" />
+    </Button>
+  </div>
+);
+
+const SavingsInput = ({ account, onChange, type }: SavingsInputProps) => (
+  <div className="flex gap-4 mb-4">
+    <div className="flex-1">
+      <Label htmlFor={`account-${account.id}`}>Account Name</Label>
+      <Input
+        id={`account-${account.id}`}
+        value={account.name}
+        onChange={(e) => onChange(account.id, "name", e.target.value)}
+        placeholder={`Enter ${type} account name`}
+      />
+    </div>
+    <div className="flex-1">
+      <Label htmlFor={`balance-${account.id}`}>Current Balance ($)</Label>
+      <Input
+        id={`balance-${account.id}`}
+        type="number"
+        value={account.balance}
+        onChange={(e) =>
+          onChange(account.id, "balance", Number(e.target.value))
+        }
+        placeholder="Enter current balance"
+      />
+    </div>
+  </div>
+);
 
 export default RetirementCalculator;
