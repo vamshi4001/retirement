@@ -46,6 +46,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import PropertyInputs from "./PropertyInputs";
+import SavingsInput from "./SavingsInput";
 
 interface Investment {
   id: keyof InvestmentStates;
@@ -73,45 +75,6 @@ interface InvestmentCategories {
   lowRisk: Investment[];
   mediumRisk: Investment[];
   highRisk: Investment[];
-}
-
-interface Property {
-  id: number;
-  address: string;
-  currentValue: number;
-  loanAmount: number;
-  monthlyRent: number;
-  monthlyExpenses: number;
-  appreciationRate: number;
-}
-
-interface PropertyInputsProps {
-  property: Property;
-  onChange: (id: number, field: keyof Property, value: string | number) => void;
-  onDelete: (id: number) => void;
-}
-
-// Savings Types
-interface SavingsAccount {
-  id: number;
-  name: string;
-  balance: number;
-  expectedReturn: number;
-}
-
-interface SavingsInputProps {
-  account: SavingsAccount;
-  onChange: (
-    id: number,
-    field: keyof SavingsAccount,
-    value: string | number
-  ) => void;
-  type: "taxable" | "tax-advantaged";
-}
-
-interface ManualSavings {
-  taxableAccounts: SavingsAccount[];
-  taxAdvantaged: SavingsAccount[];
 }
 
 const RetirementCalculator = () => {
@@ -151,10 +114,10 @@ const RetirementCalculator = () => {
     },
   });
 
-  const [currentAge, setCurrentAge] = useState(30);
-  const [retirementAge, setRetirementAge] = useState(65);
+  const [currentAge, setCurrentAge] = useState(36);
+  const [retirementAge, setRetirementAge] = useState(60);
   const [monthlyIncome, setMonthlyIncome] = useState(10000);
-  const [salary, setSalary] = useState(100000);
+  const [salary, setSalary] = useState(150000);
   const [currentSavings, setCurrentSavings] = useState(50000);
 
   const [enabledInvestments, setEnabledInvestments] =
@@ -295,33 +258,86 @@ const RetirementCalculator = () => {
   };
 
   const calculateProjections = () => {
+    // Basic parameters
     const yearsUntilRetirement = retirementAge - currentAge;
-    const annualIncome = monthlyIncome * 12;
+    const monthlyNeedInRetirement = monthlyIncome;
+    const annualNeedInRetirement = monthlyNeedInRetirement * 12;
     const assumedLifespan = 90;
     const yearsInRetirement = assumedLifespan - retirementAge;
+    const inflationRate = 0.03;
 
+    // Get weighted return rate based on selected investments
+    const getWeightedReturn = () => {
+      let totalReturn = 0;
+      let selectedCount = 0;
+
+      if (enabledInvestments.highYieldSavings) {
+        totalReturn += 0.045; // 4.5%
+        selectedCount++;
+      }
+      if (enabledInvestments.bonds) {
+        totalReturn += 0.035; // 3.5%
+        selectedCount++;
+      }
+      if (enabledInvestments.sp500) {
+        totalReturn += 0.1; // 10%
+        selectedCount++;
+      }
+      if (enabledInvestments.realEstate) {
+        totalReturn += 0.08; // 8%
+        selectedCount++;
+      }
+      if (enabledInvestments.commodities) {
+        totalReturn += 0.12; // 12%
+        selectedCount++;
+      }
+      if (enabledInvestments.crypto) {
+        totalReturn += 0.2; // 20%
+        selectedCount++;
+      }
+
+      return selectedCount > 0 ? totalReturn / selectedCount : 0.07; // Default to 7% if none selected
+    };
+
+    // Initialize accounts
     let retirement401k = currentSavings;
     let rothIRA = 0;
-    let taxableInvestments = 0;
 
+    // Initialize manual savings
+    let taxableSavings = manualSavings.taxableAccounts.reduce(
+      (sum, account) => sum + account.balance,
+      0
+    );
+    let taxAdvantaged = manualSavings.taxAdvantaged.reduce(
+      (sum, account) => sum + account.balance,
+      0
+    );
+
+    // Initialize property values
+    let propertyValues = properties.reduce(
+      (sum, property) => sum + (property.currentValue - property.loanAmount),
+      0
+    );
+    let monthlyRentalIncome = properties.reduce(
+      (sum, property) =>
+        sum + (property.monthlyRent - property.monthlyExpenses),
+      0
+    );
+
+    const weightedReturn = getWeightedReturn();
     const projectionData = [];
 
+    // Year by year projection
     for (let year = 0; year <= yearsUntilRetirement; year++) {
       const currentYear = currentAge + year;
-      const max401kContrib =
-        currentYear >= CATCH_UP_AGE
-          ? MAX_401K_CONTRIBUTION + CATCH_UP_401K
-          : MAX_401K_CONTRIBUTION;
 
-      const maxRothContrib =
-        currentYear >= CATCH_UP_AGE
-          ? MAX_ROTH_CONTRIBUTION + CATCH_UP_ROTH
-          : MAX_ROTH_CONTRIBUTION;
-
+      // 401(k) growth and contributions
       if (retirementAccounts.traditional401k.enabled) {
         const contribution = Math.min(
           retirementAccounts.traditional401k.contribution,
-          max401kContrib
+          currentYear >= CATCH_UP_AGE
+            ? MAX_401K_CONTRIBUTION + CATCH_UP_401K
+            : MAX_401K_CONTRIBUTION
         );
         retirement401k += contribution;
 
@@ -330,63 +346,81 @@ const RetirementCalculator = () => {
           salary * retirementAccounts.traditional401k.matchLimit
         );
         retirement401k += matchContribution;
-        retirement401k *= 1 + investments.retirementAccounts[0].returnRate;
+        retirement401k *= 1 + weightedReturn;
       }
 
+      // Roth IRA growth and contributions
       if (retirementAccounts.rothIRA.enabled) {
         const rothContribution = Math.min(
           retirementAccounts.rothIRA.contribution,
-          maxRothContrib
+          currentYear >= CATCH_UP_AGE
+            ? MAX_ROTH_CONTRIBUTION + CATCH_UP_ROTH
+            : MAX_ROTH_CONTRIBUTION
         );
         rothIRA += rothContribution;
-        rothIRA *= 1 + investments.retirementAccounts[1].returnRate;
+        rothIRA *= 1 + weightedReturn;
       }
 
-      let weightedReturn = 0;
-      let enabledCount = 0;
+      // Manual savings growth
+      taxableSavings *= 1 + weightedReturn;
+      taxAdvantaged *= 1 + weightedReturn;
 
-      Object.entries(enabledInvestments).forEach(([id, enabled]) => {
-        if (enabled) {
-          const investment = [
-            ...investments.lowRisk,
-            ...investments.mediumRisk,
-            ...investments.highRisk,
-          ].find((inv) => inv.id === id);
-          if (investment) {
-            weightedReturn += investment.returnRate;
-            enabledCount++;
-          }
-        }
-      });
+      // Property appreciation and rental income
+      propertyValues *= 1.03; // Conservative 3% property appreciation
+      const inflatedRentalIncome =
+        monthlyRentalIncome * Math.pow(1 + inflationRate, year) * 12;
 
-      weightedReturn = enabledCount > 0 ? weightedReturn / enabledCount : 0;
-      taxableInvestments *= 1 + weightedReturn;
+      const totalAssets =
+        retirement401k +
+        rothIRA +
+        taxableSavings +
+        taxAdvantaged +
+        propertyValues;
+
+      const projectedMonthlyIncome =
+        year === yearsUntilRetirement
+          ? inflatedRentalIncome / 12 + // Monthly rental income
+            (totalAssets * 0.04) / 12 // 4% safe withdrawal rate
+          : 0;
 
       projectionData.push({
         age: currentYear,
         total401k: Math.round(retirement401k),
         rothIRA: Math.round(rothIRA),
-        taxableInvestments: Math.round(taxableInvestments),
-        total: Math.round(retirement401k + rothIRA + taxableInvestments),
+        taxableSavings: Math.round(taxableSavings),
+        taxAdvantaged: Math.round(taxAdvantaged),
+        propertyValues: Math.round(propertyValues),
+        rentalIncome: Math.round(inflatedRentalIncome),
+        totalAssets: Math.round(totalAssets),
+        projectedMonthlyIncome: Math.round(projectedMonthlyIncome),
       });
     }
 
-    const totalRetirementNeeds = annualIncome * yearsInRetirement;
-    const projectedRetirementAccounts = retirement401k + rothIRA;
+    // Final calculations
+    const finalProjection = projectionData[projectionData.length - 1];
+    const inflationAdjustedMonthlyNeed =
+      monthlyNeedInRetirement *
+      Math.pow(1 + inflationRate, yearsUntilRetirement);
+
+    const totalRetirementNeeds =
+      inflationAdjustedMonthlyNeed * 12 * yearsInRetirement;
     const additionalSavingsNeeded = Math.max(
       0,
-      totalRetirementNeeds - projectedRetirementAccounts
+      totalRetirementNeeds -
+        (finalProjection?.totalAssets +
+          finalProjection?.rentalIncome * yearsInRetirement)
     );
 
     return {
       projectionData,
-      totalRetirementNeeds,
-      projectedRetirementAccounts,
-      additionalSavingsNeeded,
-      monthlyInvestmentNeeded: (
-        additionalSavingsNeeded /
-        (yearsUntilRetirement * 12)
-      ).toFixed(2),
+      totalRetirementNeeds: Math.round(totalRetirementNeeds),
+      projectedRetirementAccounts: Math.round(finalProjection?.totalAssets),
+      additionalSavingsNeeded: Math.round(additionalSavingsNeeded),
+      monthlyInvestmentNeeded:
+        Math.round(
+          (additionalSavingsNeeded / (yearsUntilRetirement * 12)) * 100
+        ) / 100,
+      monthlyIncomeAtRetirement: finalProjection?.projectedMonthlyIncome,
     };
   };
 
@@ -903,124 +937,5 @@ const RetirementCalculator = () => {
     </div>
   );
 };
-
-const PropertyInputs = ({
-  property,
-  onChange,
-  onDelete,
-}: PropertyInputsProps) => (
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 border rounded-lg">
-    <div className="col-span-full">
-      <Label htmlFor={`address-${property.id}`}>Property Address</Label>
-      <Input
-        id={`address-${property.id}`}
-        type="text"
-        value={property.address}
-        onChange={(e) => onChange(property.id, "address", e.target.value)}
-        placeholder="Enter property address"
-      />
-    </div>
-
-    <div>
-      <Label htmlFor={`value-${property.id}`}>Total Property Value ($)</Label>
-      <Input
-        id={`value-${property.id}`}
-        type="number"
-        value={property.currentValue}
-        onChange={(e) =>
-          onChange(property.id, "currentValue", Number(e.target.value))
-        }
-        placeholder="Current market value"
-      />
-    </div>
-
-    <div>
-      <Label htmlFor={`loan-${property.id}`}>Remaining Loan Amount ($)</Label>
-      <Input
-        id={`loan-${property.id}`}
-        type="number"
-        value={property.loanAmount}
-        onChange={(e) =>
-          onChange(property.id, "loanAmount", Number(e.target.value))
-        }
-        placeholder="Outstanding mortgage"
-      />
-    </div>
-
-    <div>
-      <Label htmlFor={`equity-${property.id}`}>Current Equity</Label>
-      <Input
-        id={`equity-${property.id}`}
-        type="text"
-        value={`$${(
-          property.currentValue - property.loanAmount
-        ).toLocaleString()}`}
-        disabled
-        className="bg-gray-50"
-      />
-    </div>
-
-    <div>
-      <Label htmlFor={`rent-${property.id}`}>Monthly Rental Income ($)</Label>
-      <Input
-        id={`rent-${property.id}`}
-        type="number"
-        value={property.monthlyRent}
-        onChange={(e) =>
-          onChange(property.id, "monthlyRent", Number(e.target.value))
-        }
-        placeholder="If rental property"
-      />
-    </div>
-
-    <div>
-      <Label htmlFor={`expenses-${property.id}`}>Monthly Expenses ($)</Label>
-      <Input
-        id={`expenses-${property.id}`}
-        type="number"
-        value={property.monthlyExpenses}
-        onChange={(e) =>
-          onChange(property.id, "monthlyExpenses", Number(e.target.value))
-        }
-        placeholder="Maintenance, taxes, etc."
-      />
-    </div>
-
-    <Button
-      variant="destructive"
-      size="icon"
-      className="absolute top-4 right-4"
-      onClick={() => onDelete(property.id)}
-    >
-      <Trash2 className="h-4 w-4" />
-    </Button>
-  </div>
-);
-
-const SavingsInput = ({ account, onChange, type }: SavingsInputProps) => (
-  <div className="flex gap-4 mb-4">
-    <div className="flex-1">
-      <Label htmlFor={`account-${account.id}`}>Account Name</Label>
-      <Input
-        id={`account-${account.id}`}
-        value={account.name}
-        onChange={(e) => onChange(account.id, "name", e.target.value)}
-        placeholder={`Enter ${type} account name`}
-      />
-    </div>
-    <div className="flex-1">
-      <Label htmlFor={`balance-${account.id}`}>Current Balance ($)</Label>
-      <Input
-        id={`balance-${account.id}`}
-        type="number"
-        value={account.balance}
-        onChange={(e) =>
-          onChange(account.id, "balance", Number(e.target.value))
-        }
-        placeholder="Enter current balance"
-      />
-    </div>
-  </div>
-);
 
 export default RetirementCalculator;
